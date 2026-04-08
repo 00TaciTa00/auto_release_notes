@@ -601,6 +601,20 @@ body {
 }
 .btn-save:hover { background: var(--color-primary-hover); }
 
+/* ===== TOGGLE BUTTON ===== */
+.toggle-btn {
+  padding: 4px 14px; border-radius: 12px; font-size: 11px; font-weight: 700;
+  border: 1px solid var(--color-bg-secondary);
+  background: var(--color-bg-secondary); color: var(--color-text-muted);
+  cursor: pointer; transition: all .2s; font-family: 'Pretendard', sans-serif;
+  flex-shrink: 0;
+}
+.toggle-btn.on {
+  background: var(--color-primary); border-color: var(--color-primary);
+  color: var(--color-white);
+}
+.webhook-settings { margin-top: 12px; display: flex; flex-direction: column; gap: 12px; }
+
 /* ===== GLOBAL SETTINGS PAGE ===== */
 .global-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 14px; }
 
@@ -1338,14 +1352,32 @@ body {
                 <option>시스템 설정 따름</option>
               </select>
             </div>
+          </div>
+
+          <div class="settings-card">
+            <div class="settings-card-title">웹훅 수신</div>
             <div class="form-field">
-              <label class="form-label">자동 체크 주기</label>
-              <select class="form-select">
-                <option>10분마다</option>
-                <option>30분마다</option>
-                <option>1시간마다</option>
-                <option>수동</option>
-              </select>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                <div>
+                  <div class="form-label" style="margin-bottom: 2px;">GitLab / GitHub → Sosik 신호 수신</div>
+                  <div style="font-size: 10px; color: var(--color-text-muted);">ON 시 로컬 HTTP 서버 대기 — 레포 웹훅 URL에 등록 필요</div>
+                </div>
+                <button class="toggle-btn" id="webhookToggle" onclick="toggleWebhook()">OFF</button>
+              </div>
+            </div>
+            <div class="webhook-settings" id="webhookSettings" style="display: none;">
+              <div class="form-field" style="margin-bottom: 0;">
+                <label class="form-label">수신 포트</label>
+                <input type="text" class="form-input" value="9876" placeholder="예: 9876" />
+              </div>
+              <div class="form-field" style="margin-bottom: 0;">
+                <label class="form-label">시크릿 토큰</label>
+                <input type="password" class="form-input" placeholder="웹훅 서명 검증용 토큰" />
+              </div>
+              <div class="form-field" style="margin-bottom: 0;">
+                <label class="form-label">웹훅 URL <span style="font-weight: 400; color: var(--color-text-muted);">— GitLab/GitHub에 등록</span></label>
+                <div class="form-readonly">http://localhost:9876/webhook</div>
+              </div>
             </div>
           </div>
 
@@ -1357,13 +1389,6 @@ body {
                 <option>새 커밋 발견 시 알림</option>
                 <option>릴리즈 노트 생성 완료 시만</option>
                 <option>알림 끄기</option>
-              </select>
-            </div>
-            <div class="form-field">
-              <label class="form-label">알림 소리</label>
-              <select class="form-select">
-                <option>기본 소리</option>
-                <option>소리 없음</option>
               </select>
             </div>
           </div>
@@ -1393,6 +1418,25 @@ body {
                   <div class="platform-name">GitHub</div>
                 </div>
               </div>
+            </div>
+
+            <div class="form-field">
+              <label class="form-label">Diff 소스 방식 <span style="color: var(--color-text-muted); font-weight: 400; font-size: 10px;">— 최초 등록 후 변경 불가</span></label>
+              <div class="platform-select">
+                <div class="platform-option selected" onclick="selectDiffSource(this, 'api')">
+                  <div class="platform-icon">🌐</div>
+                  <div class="platform-name">API 방식</div>
+                </div>
+                <div class="platform-option" onclick="selectDiffSource(this, 'local')">
+                  <div class="platform-icon">📁</div>
+                  <div class="platform-name">로컬 git 폴더</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-field" id="localPathField" style="display: none;">
+              <label class="form-label">로컬 git 폴더 경로</label>
+              <input type="text" class="form-input" placeholder="/Users/username/projects/my-repo" />
             </div>
 
             <div class="form-field">
@@ -1530,10 +1574,27 @@ function showGlobalSettings() {
 
 // ===== PLATFORM SELECTION =====
 function selectPlatform(element, platform) {
-  document.querySelectorAll('.platform-option').forEach(opt => {
+  element.closest('.platform-select').querySelectorAll('.platform-option').forEach(opt => {
     opt.classList.remove('selected');
   });
   element.classList.add('selected');
+}
+
+function selectDiffSource(element, type) {
+  element.closest('.platform-select').querySelectorAll('.platform-option').forEach(opt => {
+    opt.classList.remove('selected');
+  });
+  element.classList.add('selected');
+  document.getElementById('localPathField').style.display = type === 'local' ? 'block' : 'none';
+}
+
+// ===== WEBHOOK TOGGLE =====
+function toggleWebhook() {
+  const btn = document.getElementById('webhookToggle');
+  const settings = document.getElementById('webhookSettings');
+  const isOn = btn.classList.toggle('on');
+  btn.textContent = isOn ? 'ON' : 'OFF';
+  settings.style.display = isOn ? 'flex' : 'none';
 }
 
 // ===== ACTIONS =====
@@ -1544,11 +1605,23 @@ function refreshReleases() {}
 function refreshGraph() {}
 
 function generateRelease() {
-  showToast('AI 요약 생성', '새로운 릴리즈 노트를 생성 중입니다...');
+  const hasExisting = document.querySelectorAll('.release-card').length > 0;
+  if (hasExisting) {
+    openModal(
+      'AI 요약 재생성',
+      '최신 diff를 기반으로 릴리즈 노트를 새로 생성합니다. 기존 노트는 덮어씌워집니다.',
+      () => {
+        closeModal();
+        showToast('AI 요약 생성', '최신 diff로 릴리즈 노트를 재생성 중입니다...');
+      }
+    );
+  } else {
+    showToast('AI 요약 생성', '새로운 릴리즈 노트를 생성 중입니다...');
+  }
 }
 
 function copyToWorks() {
-  showToast('복사', 'Naver Works 형식으로 복사되었습니다.');
+  showToast('복사', 'Naver Works 에디터용 HTML이 복사되었습니다.');
 }
 
 function saveMarkdown() {

@@ -264,8 +264,12 @@ main { padding: 48px; max-width: 1200px; margin: 0 auto; }
 
         <div class="node type-trigger">
           <div class="node-tag">TRIGGER</div>
-          <div class="node-title">앱 실행 / 수동 체크</div>
-          <div class="node-desc">앱 시작 시 등록된 모든 레포 자동 체크<br>"지금 확인" 버튼으로 수동 실행 — 전체 또는 특정 레포 선택<br>시작 프로그램 등록 옵션 (설정에서 켜기/끄기)</div>
+          <div class="node-title">웹훅 수신 / 수동 체크</div>
+          <div class="node-desc">
+            <strong style="color:var(--color-warning)">웹훅 ON</strong> — GitLab/GitHub/로컬 git hook 신호 수신 시 자동 실행<br>
+            <strong style="color:var(--color-info)">수동</strong> — "AI 요약 생성" 버튼으로 언제든 실행 가능 (웹훅 ON/OFF 무관)<br>
+            수동 실행 + 기존 노트 있으면 → 덮어쓰기 확인 후 재생성
+          </div>
         </div>
         <div class="arrow"><div class="arrow-line"></div></div>
 
@@ -371,7 +375,7 @@ main { padding: 48px; max-width: 1200px; margin: 0 auto; }
           <div class="pub-item">
             <div class="pub-icon">📮</div>
             <div class="pub-name">Naver Works</div>
-            <div class="pub-desc">HTML 클립보드 복사</div>
+            <div class="pub-desc">HTML 복사 (API 연동 없음)</div>
           </div>
           <div class="pub-item">
             <div class="pub-icon">📄</div>
