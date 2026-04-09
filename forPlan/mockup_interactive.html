@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sosik — Interactive Mockup v2</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
+<script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
 <style>
 :root {
   --color-primary: #5E7F5F;
@@ -478,6 +480,31 @@ body {
 .ab-md:hover { background: rgba(111,163,160,0.2); border-color: var(--color-info); }
 .ab-txt { background: rgba(94,127,95,0.1); border-color: rgba(94,127,95,0.3); color: var(--color-primary); }
 .ab-txt:hover { background: rgba(94,127,95,0.2); border-color: var(--color-primary); }
+.ab-edit { background: transparent; border-color: var(--color-bg-secondary); color: var(--color-text-muted); }
+.ab-edit:hover { border-color: var(--color-text-muted); color: var(--color-text-secondary); }
+.ab-edit.editing { background: rgba(201,168,106,0.1); border-color: rgba(201,168,106,0.35); color: var(--color-warning); }
+
+.edit-area {
+  width: 100%; min-height: 130px; padding: 10px 12px;
+  border: 1px solid var(--color-info); border-radius: 6px;
+  font-size: 12px; font-family: 'Pretendard', sans-serif;
+  color: var(--color-text-primary); background: var(--color-bg-primary);
+  resize: vertical; line-height: 1.7; outline: none;
+}
+.edit-area:focus { border-color: var(--color-primary); }
+.edit-save-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+.btn-edit-save {
+  padding: 6px 16px; border-radius: 6px; font-size: 11px; font-weight: 600;
+  border: 1px solid var(--color-primary); background: var(--color-primary);
+  color: var(--color-white); cursor: pointer; font-family: 'Pretendard', sans-serif;
+}
+.btn-edit-save:hover { background: var(--color-primary-hover); }
+.btn-edit-cancel {
+  padding: 6px 16px; border-radius: 6px; font-size: 11px; font-weight: 500;
+  border: 1px solid var(--color-bg-secondary); background: transparent;
+  color: var(--color-text-secondary); cursor: pointer; font-family: 'Pretendard', sans-serif;
+}
+.btn-edit-cancel:hover { border-color: var(--color-text-muted); }
 .ab-publish {
   background: var(--color-primary); border-color: var(--color-primary);
   color: var(--color-white); margin-left: auto;
@@ -933,7 +960,7 @@ body {
 
         <div class="release-list">
           <!-- Release Card 1 -->
-          <div class="release-card" id="release-1" onclick="toggleRelease('release-1')">
+          <div class="release-card" id="release-1">
             <div class="release-header">
               <div class="release-version">v2.4.1</div>
               <div class="release-meta">
@@ -944,7 +971,7 @@ body {
                   <span class="tag tag-ui">UI</span>
                 </div>
               </div>
-              <div class="release-expand">▼</div>
+              <div class="release-expand" onclick="toggleRelease('release-1')">▼</div>
             </div>
             <div class="release-preview">
               장바구니 수량 증가 버그 수정, 상품 상세 페이지 이미지 확대 기능 추가, 검색 바 디자인 개선 등이 포함된 업데이트입니다.
@@ -1008,28 +1035,28 @@ body {
                 </div>
               </div>
               <div class="release-actions">
+                <button class="action-btn ab-edit" onclick="editRelease('release-1', event)">
+                  <span>✏️</span>
+                  <span>편집</span>
+                </button>
                 <button class="action-btn ab-works" onclick="copyToWorks()">
                   <span>📋</span>
                   <span>Naver Works 복사</span>
                 </button>
-                <button class="action-btn ab-md" onclick="saveMarkdown()">
-                  <span>💾</span>
-                  <span>Markdown 저장</span>
+                <button class="action-btn ab-md" onclick="copyMarkdown()">
+                  <span>📋</span>
+                  <span>Markdown 복사</span>
                 </button>
                 <button class="action-btn ab-txt" onclick="copyText()">
                   <span>📄</span>
                   <span>텍스트 복사</span>
-                </button>
-                <button class="action-btn ab-publish" onclick="publishRelease()">
-                  <span>🚀</span>
-                  <span>발행하기</span>
                 </button>
               </div>
             </div>
           </div>
 
           <!-- Release Card 2 -->
-          <div class="release-card" id="release-2" onclick="toggleRelease('release-2')">
+          <div class="release-card" id="release-2">
             <div class="release-header">
               <div class="release-version">v2.4.0</div>
               <div class="release-meta">
@@ -1039,7 +1066,7 @@ body {
                   <span class="tag tag-ui">UI</span>
                 </div>
               </div>
-              <div class="release-expand">▼</div>
+              <div class="release-expand" onclick="toggleRelease('release-2')">▼</div>
             </div>
             <div class="release-preview">
               회원가입 시 이메일 인증 기능 추가, 메인 페이지 배너 슬라이더 개선 등이 포함된 업데이트입니다.
@@ -1087,21 +1114,21 @@ body {
                 </div>
               </div>
               <div class="release-actions">
+                <button class="action-btn ab-edit" onclick="editRelease('release-2', event)">
+                  <span>✏️</span>
+                  <span>편집</span>
+                </button>
                 <button class="action-btn ab-works" onclick="copyToWorks()">
                   <span>📋</span>
                   <span>Naver Works 복사</span>
                 </button>
-                <button class="action-btn ab-md" onclick="saveMarkdown()">
-                  <span>💾</span>
-                  <span>Markdown 저장</span>
+                <button class="action-btn ab-md" onclick="copyMarkdown()">
+                  <span>📋</span>
+                  <span>Markdown 복사</span>
                 </button>
                 <button class="action-btn ab-txt" onclick="copyText()">
                   <span>📄</span>
                   <span>텍스트 복사</span>
-                </button>
-                <button class="action-btn ab-publish" onclick="publishRelease()">
-                  <span>🚀</span>
-                  <span>발행하기</span>
                 </button>
               </div>
             </div>
@@ -1229,6 +1256,10 @@ body {
               <div class="form-readonly">https://gitlab.com/mycompany/shop-frontend</div>
             </div>
             <div class="form-field">
+              <label class="form-label">Diff 소스 방식</label>
+              <div class="form-readonly">🌐 API 방식</div>
+            </div>
+            <div class="form-field">
               <label class="form-label">액세스 토큰</label>
               <input type="password" class="form-input" value="glpat-xxxxxxxxxxxx" />
             </div>
@@ -1303,14 +1334,7 @@ body {
 
         <div class="global-grid">
           <div class="settings-card">
-            <div class="settings-card-title">AI 제공자</div>
-            <div class="form-field">
-              <label class="form-label">기본 AI 제공자</label>
-              <select class="form-select">
-                <option>Claude (Anthropic)</option>
-                <option>GPT-4 (OpenAI)</option>
-              </select>
-            </div>
+            <div class="settings-card-title">AI API Key</div>
             <div class="form-field">
               <label class="form-label">Claude API Key</label>
               <input type="password" class="form-input" value="sk-ant-xxxxxxxxxxxx" />
@@ -1430,7 +1454,7 @@ body {
               <input type="text" class="form-input" placeholder="예: my-project" />
             </div>
 
-            <div class="form-field">
+            <div class="form-field" id="repoUrlField">
               <label class="form-label">레포지토리 URL</label>
               <input type="text" class="form-input" placeholder="https://gitlab.com/username/repo" />
             </div>
@@ -1572,6 +1596,7 @@ function selectDiffSource(element, type) {
   });
   element.classList.add('selected');
   document.getElementById('localPathField').style.display = type === 'local' ? 'block' : 'none';
+  document.getElementById('repoUrlField').style.display = type === 'local' ? 'none' : 'block';
 }
 
 // ===== WEBHOOK TOGGLE =====
@@ -1610,17 +1635,73 @@ function copyToWorks() {
   showToast('복사', 'Naver Works 에디터용 HTML이 복사되었습니다.');
 }
 
-function saveMarkdown() {
-  showToast('저장', 'Markdown 파일로 저장되었습니다.');
+function copyMarkdown() {
+  showToast('복사', 'Markdown이 클립보드에 복사되었습니다.');
+}
+
+// ===== EDIT RELEASE =====
+const editors = {};
+
+function editRelease(cardId, event) {
+  event.stopPropagation();
+  const card = document.getElementById(cardId);
+  const activePane = card.querySelector('.detail-pane.active');
+  if (!activePane || activePane.dataset.pane === 'diff') {
+    showToast('편집 불가', '원본 Diff는 편집할 수 없습니다.');
+    return;
+  }
+  if (editors[cardId]) return;
+
+  activePane.dataset.originalContent = activePane.innerHTML;
+  const text = activePane.innerText.trim();
+  activePane.innerHTML = `
+    <textarea id="editor-${cardId}">${text}</textarea>
+    <div class="edit-save-row">
+      <button class="btn-edit-cancel" onclick="cancelEdit('${cardId}', event)">취소</button>
+      <button class="btn-edit-save" onclick="saveEdit('${cardId}', event)">저장</button>
+    </div>`;
+
+  editors[cardId] = new EasyMDE({
+    element: document.getElementById(`editor-${cardId}`),
+    spellChecker: false,
+    toolbar: ['bold', 'italic', '|', 'unordered-list', 'ordered-list', '|', 'preview'],
+    minHeight: '120px',
+    autofocus: true,
+    status: false,
+  });
+  card.querySelector('.ab-edit').classList.add('editing');
+}
+
+function saveEdit(cardId, event) {
+  event.stopPropagation();
+  const card = document.getElementById(cardId);
+  const activePane = card.querySelector('.detail-pane.active');
+  const newText = editors[cardId] ? editors[cardId].value() : '';
+  if (editors[cardId]) { editors[cardId].toTextArea(); delete editors[cardId]; }
+  activePane.innerHTML = `
+    <div class="detail-section">
+      <div class="detail-section-title">주요 변경사항</div>
+      <div style="font-size:12px;color:var(--color-text-secondary);line-height:1.7;white-space:pre-wrap;">${newText}</div>
+    </div>`;
+  delete activePane.dataset.originalContent;
+  card.querySelector('.ab-edit').classList.remove('editing');
+  showToast('저장', '릴리즈 노트가 수정되었습니다.');
+}
+
+function cancelEdit(cardId, event) {
+  event.stopPropagation();
+  const card = document.getElementById(cardId);
+  const activePane = card.querySelector('.detail-pane.active');
+  if (editors[cardId]) { editors[cardId].toTextArea(); delete editors[cardId]; }
+  activePane.innerHTML = activePane.dataset.originalContent;
+  delete activePane.dataset.originalContent;
+  card.querySelector('.ab-edit').classList.remove('editing');
 }
 
 function copyText() {
   showToast('복사', '텍스트가 클립보드에 복사되었습니다.');
 }
 
-function publishRelease() {
-  showToast('발행', '릴리즈 노트가 발행되었습니다.');
-}
 
 function removeExcl(element) {
   element.parentElement.remove();

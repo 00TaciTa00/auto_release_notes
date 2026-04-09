@@ -245,7 +245,7 @@ main { padding: 48px; max-width: 1200px; margin: 0 auto; }
 <body>
 
 <header>
-  <div class="brand">UpdateNote <span>Flow Chart v4</span></div>
+  <div class="brand">Sosik <span>Flow Chart v4</span></div>
 </header>
 
 <main>
@@ -280,17 +280,17 @@ main { padding: 48px; max-width: 1200px; margin: 0 auto; }
         </div>
         <div class="arrow"><div class="arrow-line"></div></div>
 
-        <div class="node type-process">
-          <div class="node-tag">PROCESS</div>
-          <div class="node-title">git diff 추출</div>
-          <div class="node-desc">레포별 독립 보안 제외 규칙 적용<br>경로 패턴 &amp; 확장자 패턴 (전역 규칙 없음)<br>보안 규칙 적용 후 diff 추출 — 순서 고정</div>
-        </div>
-        <div class="arrow"><div class="arrow-line"></div></div>
-
         <div class="node type-notify">
           <div class="node-tag">NOTIFY</div>
           <div class="node-title">토스트 알림</div>
           <div class="node-desc">새 배포 감지 시 앱 내 토스트 알림<br>레포 이름 + 커밋 정보 함께 표시<br>사이드바 레포에 알림 뱃지 표시</div>
+        </div>
+        <div class="arrow"><div class="arrow-line"></div></div>
+
+        <div class="node type-process">
+          <div class="node-tag">PROCESS</div>
+          <div class="node-title">git diff 추출</div>
+          <div class="node-desc">레포별 독립 보안 제외 규칙 적용<br>경로 패턴 &amp; 확장자 패턴 (전역 규칙 없음)<br>보안 규칙 적용 후 diff 추출 — 순서 고정</div>
         </div>
         <div class="arrow"><div class="arrow-line"></div></div>
 
@@ -312,7 +312,7 @@ main { padding: 48px; max-width: 1200px; margin: 0 auto; }
 
     <!-- RIGHT: DASHBOARD -->
     <div>
-      <div class="col-label">// SIDEBAR & REVIEW & PUBLISH</div>
+      <div class="col-label">// SIDEBAR & REVIEW & COPY</div>
       <div class="chain">
 
         <div class="node type-sidebar">
@@ -343,7 +343,7 @@ main { padding: 48px; max-width: 1200px; margin: 0 auto; }
             </div>
             <div class="tab active">
               <div class="tab-name">릴리즈 노트</div>
-              <div class="tab-desc">초안 확인·수정·발행 새로고침</div>
+              <div class="tab-desc">초안 확인·수정·복사 새로고침</div>
             </div>
             <div class="tab">
               <div class="tab-name">깃 그래프</div>
@@ -360,14 +360,14 @@ main { padding: 48px; max-width: 1200px; margin: 0 auto; }
         <div class="node type-ui">
           <div class="node-tag">UI — 릴리즈 노트 목록 탭</div>
           <div class="node-title">초안 확인 &amp; 수정</div>
-          <div class="node-desc">해당 레포의 AI 요약 초안 표시<br>한/영 탭 전환 · 직접 편집 가능<br>과거 기록 열람 — 레포별 히스토리 재열람 및 재발행</div>
+          <div class="node-desc">해당 레포의 AI 요약 초안 표시<br>한/영 탭 전환 · 마크다운 에디터로 직접 편집 가능<br>과거 기록 열람 — 레포별 히스토리 재열람 및 재복사</div>
         </div>
         <div class="arrow"><div class="arrow-line"></div></div>
 
         <div class="node type-publish">
-          <div class="node-tag">PUBLISH</div>
-          <div class="node-title">발행 포맷 선택 후 발행</div>
-          <div class="node-desc">3가지 포맷 중 선택</div>
+          <div class="node-tag">COPY</div>
+          <div class="node-title">복사 포맷 선택</div>
+          <div class="node-desc">3가지 포맷 중 선택하여 복사</div>
         </div>
         <div class="arrow"><div class="arrow-line"></div></div>
 
@@ -380,7 +380,7 @@ main { padding: 48px; max-width: 1200px; margin: 0 auto; }
           <div class="pub-item">
             <div class="pub-icon">📄</div>
             <div class="pub-name">Markdown</div>
-            <div class="pub-desc">.md 파일 다운로드</div>
+            <div class="pub-desc">클립보드 복사</div>
           </div>
           <div class="pub-item">
             <div class="pub-icon">📋</div>
