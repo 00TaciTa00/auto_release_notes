@@ -1,5 +1,8 @@
 import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'path'
+import { initDb } from '../db/index'
+import { registerAllHandlers } from './ipc/index'
+import { logger } from '../shared/logger'
 
 // TODO: 트레이 최소화 구현 예정
 // import { Tray, Menu } from 'electron'
@@ -31,8 +34,6 @@ function createWindow(): void {
     return { action: 'deny' }
   })
 
-  // 개발 모드: Vite devserver URL 로드
-  // 프로덕션: dist 파일 로드
   if (isDev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
@@ -41,6 +42,15 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  try {
+    initDb()
+  } catch (err) {
+    logger.error('DB 초기화 실패 — 앱 종료', { err: String(err) })
+    app.quit()
+    return
+  }
+
+  registerAllHandlers()
   createWindow()
 
   app.on('activate', function () {
