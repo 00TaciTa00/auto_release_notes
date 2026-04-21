@@ -47,6 +47,18 @@ export function getAllRepos(): Repository[] {
   }
 }
 
+/** ID로 단일 레포를 조회합니다. IPC 핸들러에서 레포 존재 확인용으로 사용 */
+export function getRepoById(id: string): Repository | null {
+  try {
+    const row = getDb()
+      .prepare('SELECT * FROM repositories WHERE id = ?')
+      .get(id) as RepoRow | null
+    return row ? rowToRepo(row) : null
+  } catch (err) {
+    throw new DatabaseError(`레포 단건 조회 실패: ${err}`)
+  }
+}
+
 export function addRepo(repo: Repository): Repository {
   try {
     const now = new Date().toISOString()
@@ -116,7 +128,6 @@ export function updateRepoSettings(id: string, patch: Partial<WritableRepoFields
     }
 
     params.push(id)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     getDb()
       .prepare(`UPDATE repositories SET ${sets.join(', ')} WHERE id = ?`)
       .run(...(params as readonly unknown[]))

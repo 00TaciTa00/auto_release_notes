@@ -4,7 +4,8 @@ import { Button } from '../common/Button'
 import { Modal } from '../common/Modal'
 import { EmptyState } from '../common/EmptyState'
 import { useToast } from '../common/Toast'
-import type { AIProvider, SummaryLanguage, SummaryStyle } from '../../../../shared/types'
+import { api } from '../../lib/api'
+import type { AIProvider, SummaryLanguage, SummaryStyle, SecurityExclusionRule } from '../../../../shared/types'
 import styles from './RepoSettings.module.css'
 
 const PLATFORM_LABEL: Record<string, string> = { gitlab: 'GitLab', github: 'GitHub' }
@@ -20,14 +21,16 @@ export function RepoSettings() {
   const [summaryStyle, setSummaryStyle] = useState<SummaryStyle>('detailed')
   const [accessToken, setAccessToken] = useState('')
   const [newPattern, setNewPattern] = useState('')
-  const [patterns, setPatterns] = useState<string[]>([])
+  // 보안 규칙은 DB에서 로드 (메모리가 아닌 영구 저장)
+  const [securityRules, setSecurityRules] = useState<SecurityExclusionRule[]>([])
 
   useEffect(() => {
     if (selectedRepo) {
       setAiProvider(selectedRepo.aiProvider)
       setSummaryLanguage(selectedRepo.summaryLanguage)
       setSummaryStyle(selectedRepo.summaryStyle)
-      setPatterns([])
+      // 레포 변경 시 보안 규칙 새로 로드
+      api.securityRule.getByRepo(selectedRepo.id).then(setSecurityRules)
     }
     // selectedRepo.id로 레포 변경 감지, 전체 객체 의존성 불필요
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -35,31 +38,52 @@ export function RepoSettings() {
 
   if (!selectedRepo) return <EmptyState icon="🌿" title="레포지토리를 선택해주세요" />
 
+  /** AI 설정을 DB에 저장합니다 */
   async function handleSaveAI() {
     setSaving(true)
-    await new Promise((r) => setTimeout(r, 300))
-    updateRepo(selectedRepo!.id, { aiProvider, summaryLanguage, summaryStyle })
-    setSaving(false)
-    showToast('AI 설정이 저장되었습니다', 'success')
-  }
-
-  function handleSaveToken() {
-    if (!accessToken.trim()) return
-    // ipc:secure:setApiKey(`repo:${selectedRepo.id}:access_token`, accessToken)
-    setAccessToken('')
-    showToast('액세스 토큰이 저장되었습니다', 'success')
-  }
-
-  function addPattern() {
-    const p = newPattern.trim()
-    if (p && !patterns.includes(p)) {
-      setPatterns([...patterns, p])
+    try {
+      updateRepo(selectedRepo!.id, { aiProvider, summaryLanguage, summaryStyle })
+      showToast('AI 설정이 저장되었습니다', 'success')
+    } catch {
+      showToast('AI 설정 저장에 실패했습니다', 'error')
+    } finally {
+      setSaving(false)
     }
-    setNewPattern('')
   }
 
-  function removePattern(p: string) {
-    setPatterns(patterns.filter((x) => x !== p))
+  /** 액세스 토큰을 암호화 저장소에 저장합니다 */
+  async function handleSaveToken() {
+    if (!accessToken.trim()) return
+    try {
+      await api.secure.setApiKey(`repo:${selectedRepo!.id}:access_token`, accessToken.trim())
+      setAccessToken('')
+      showToast('액세스 토큰이 저장되었습니다', 'success')
+    } catch {
+      showToast('액세스 토큰 저장에 실패했습니다', 'error')
+    }
+  }
+
+  /** 보안 제외 패턴을 DB에 추가합니다 */
+  async function addPattern() {
+    const p = newPattern.trim()
+    if (!p || securityRules.some((r) => r.pattern === p)) return
+    try {
+      const rule = await api.securityRule.add(selectedRepo!.id, p)
+      setSecurityRules([...securityRules, rule])
+      setNewPattern('')
+    } catch {
+      showToast('패턴 추가에 실패했습니다', 'error')
+    }
+  }
+
+  /** 보안 제외 패턴을 DB에서 삭제합니다 */
+  async function removePattern(id: number) {
+    try {
+      await api.securityRule.remove(id)
+      setSecurityRules(securityRules.filter((r) => r.id !== id))
+    } catch {
+      showToast('패턴 삭제에 실패했습니다', 'error')
+    }
   }
 
   function handleDelete() {
@@ -144,6 +168,9 @@ export function RepoSettings() {
 
       <section className={styles.section}>
         <h3 className={styles.sectionTitle}>보안 파일 제외 규칙</h3>
+        <p className={styles.sectionDesc}>
+          diff 추출 시 AI로 전송되지 않을 파일 패턴입니다. (예: **/.env, *.pem, secrets/**)
+        </p>
         <div className={styles.row}>
           <input
             type="text"
@@ -158,13 +185,13 @@ export function RepoSettings() {
           </Button>
         </div>
         <div className={styles.patternList}>
-          {patterns.length === 0 ? (
+          {securityRules.length === 0 ? (
             <span className={styles.emptyPatterns}>추가된 규칙 없음</span>
           ) : (
-            patterns.map((p) => (
-              <span key={p} className={styles.patternTag}>
-                {p}
-                <button className={styles.removeBtn} onClick={() => removePattern(p)}>✕</button>
+            securityRules.map((rule) => (
+              <span key={rule.id} className={styles.patternTag}>
+                {rule.pattern}
+                <button className={styles.removeBtn} onClick={() => removePattern(rule.id)}>✕</button>
               </span>
             ))
           )}

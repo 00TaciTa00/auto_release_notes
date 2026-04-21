@@ -57,6 +57,14 @@ export interface GlobalSettings {
   webhookPort: number
 }
 
+/** diff:get-commits IPC 응답 — GitGraph 표시용 */
+export interface CommitInfo {
+  sha: string
+  message: string
+  author: string
+  date: string
+}
+
 /** electron-store에 저장되는 민감 정보 (암호화) */
 export interface SecureStore {
   claudeApiKey?: string

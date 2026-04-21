@@ -1,38 +1,49 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useApp } from '../../contexts/AppContext'
 import { Button } from '../common/Button'
 import { EmptyState } from '../common/EmptyState'
 import { useToast } from '../common/Toast'
+import { api } from '../../lib/api'
+import type { CommitInfo } from '../../../../../shared/types'
 import styles from './GitGraph.module.css'
-
-interface CommitRow {
-  sha: string
-  message: string
-  author: string
-  date: string
-}
-
-const MOCK_COMMITS: CommitRow[] = [
-  { sha: 'ghi9012def', message: 'feat: 알림 설정 페이지 추가', author: 'dev1', date: '2026-04-20T10:30:00Z' },
-  { sha: 'def5678abc', message: 'fix: 로그인 세션 만료 처리', author: 'dev2', date: '2026-04-19T15:00:00Z' },
-  { sha: 'abc1234xyz', message: 'style: 버튼 컴포넌트 통일', author: 'dev1', date: '2026-04-18T09:00:00Z' },
-  { sha: 'xyz0987uvw', message: 'chore: 의존성 업데이트', author: 'dev3', date: '2026-04-17T11:20:00Z' },
-]
 
 export function GitGraph() {
   const { selectedRepo } = useApp()
   const { showToast } = useToast()
   const [loading, setLoading] = useState(false)
-  const [commits] = useState<CommitRow[]>(MOCK_COMMITS)
+  const [commits, setCommits] = useState<CommitInfo[]>([])
+
+  // 선택 레포 변경 시 커밋 목록 자동 로드
+  useEffect(() => {
+    if (!selectedRepo?.id) {
+      setCommits([])
+      return
+    }
+    setLoading(true)
+    api.diff
+      .getCommits(selectedRepo.id)
+      .then(setCommits)
+      .catch(() => {
+        // baselineSha 미설정 등으로 실패할 수 있음 — 조용히 빈 목록 유지
+        setCommits([])
+      })
+      .finally(() => setLoading(false))
+  }, [selectedRepo?.id])
 
   if (!selectedRepo) return <EmptyState icon="🌿" title="레포지토리를 선택해주세요" />
 
+  /** 커밋 목록을 다시 불러옵니다 */
   async function handleRefresh() {
     setLoading(true)
-    // ipc:diff:check
-    await new Promise((r) => setTimeout(r, 800))
-    setLoading(false)
-    showToast('커밋 내역을 새로고침했습니다', 'success')
+    try {
+      const updated = await api.diff.getCommits(selectedRepo!.id)
+      setCommits(updated)
+      showToast('커밋 내역을 새로고침했습니다', 'success')
+    } catch {
+      showToast('커밋 내역을 불러오는 중 오류가 발생했습니다', 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -50,7 +61,14 @@ export function GitGraph() {
       </div>
 
       {commits.length === 0 ? (
-        <EmptyState icon="📋" title="커밋 내역이 없습니다" />
+        <EmptyState
+          icon="📋"
+          title={
+            selectedRepo.baselineSha
+              ? '새 커밋이 없습니다'
+              : '기준 SHA가 설정되지 않았습니다'
+          }
+        />
       ) : (
         <div className={styles.table}>
           <div className={styles.thead}>

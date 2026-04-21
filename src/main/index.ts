@@ -19,7 +19,7 @@ function createWindow(): void {
     autoHideMenuBar: true,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false,
+      sandbox: true, // H-6: Electron 보안 모범 사례 — preload는 contextIsolation으로 보호됨
       contextIsolation: true,
       nodeIntegration: false
     }

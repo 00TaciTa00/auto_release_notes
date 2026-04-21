@@ -4,6 +4,7 @@ import { Button } from '../common/Button'
 import { TabBar } from '../common/TabBar'
 import { useToast } from '../common/Toast'
 import { ChangeTypeChip } from './ChangeTypeChip'
+import { api } from '../../lib/api'
 import type { ReleaseNote, Repository } from '../../../../shared/types'
 import styles from './ReleaseNoteDetail.module.css'
 
@@ -61,16 +62,23 @@ export function ReleaseNoteDetail({ note, repo, onBack }: ReleaseNoteDetailProps
   const editedContent = activeTab === 'ko' ? editedKo : editedEn
   const setEditedContent = activeTab === 'ko' ? setEditedKo : setEditedEn
 
+  /** 편집 내용을 DB에 저장하고 Context를 업데이트합니다 */
   async function handleSave() {
     setSaving(true)
-    await new Promise((r) => setTimeout(r, 300))
-    setReleaseNotes(
-      releaseNotes.map((n) =>
-        n.id === note.id ? { ...n, editedKo, editedEn, updatedAt: new Date().toISOString() } : n
+    try {
+      await api.releaseNote.update(note.id, { editedKo, editedEn })
+      const now = new Date().toISOString()
+      setReleaseNotes(
+        releaseNotes.map((n) =>
+          n.id === note.id ? { ...n, editedKo, editedEn, updatedAt: now } : n
+        )
       )
-    )
-    setSaving(false)
-    showToast('저장되었습니다', 'success')
+      showToast('저장되었습니다', 'success')
+    } catch {
+      showToast('저장 중 오류가 발생했습니다', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   function handleCopy() {

@@ -47,6 +47,40 @@ export function getNotesByRepo(repoId: string): ReleaseNote[] {
   }
 }
 
+/**
+ * AI 요약 생성 후 새 릴리즈 노트를 DB에 저장합니다.
+ * 생성된 레코드를 반환하며, id와 created_at은 DB가 자동 생성합니다.
+ */
+export function createNote(
+  note: Omit<ReleaseNote, 'id' | 'createdAt' | 'updatedAt'>
+): ReleaseNote {
+  try {
+    const now = new Date().toISOString()
+    const result = getDb()
+      .prepare(
+        `INSERT INTO release_notes
+           (repo_id, from_sha, to_sha, version_tag, raw_diff,
+            ai_draft_ko, ai_draft_en, change_types, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        note.repoId,
+        note.fromSha,
+        note.toSha,
+        note.versionTag ?? null,
+        note.rawDiff,
+        note.aiDraftKo ?? null,
+        note.aiDraftEn ?? null,
+        note.changeTypes.length > 0 ? JSON.stringify(note.changeTypes) : null,
+        now,
+        now
+      )
+    return { ...note, id: Number(result.lastInsertRowid), createdAt: now, updatedAt: now }
+  } catch (err) {
+    throw new DatabaseError(`릴리즈 노트 생성 실패: ${err}`)
+  }
+}
+
 export function updateNote(id: number, patch: Partial<ReleaseNote>): void {
   try {
     const now = new Date().toISOString()
