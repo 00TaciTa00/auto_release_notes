@@ -1,66 +1,84 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useApp } from '../../contexts/AppContext'
+import { useTranslation } from '../../i18n/useTranslation'
 import { Button } from '../common/Button'
 import { EmptyState } from '../common/EmptyState'
 import { useToast } from '../common/Toast'
+import { api } from '../../lib/api'
+import type { CommitInfo } from '../../../../../shared/types'
 import styles from './GitGraph.module.css'
-
-interface CommitRow {
-  sha: string
-  message: string
-  author: string
-  date: string
-}
-
-const MOCK_COMMITS: CommitRow[] = [
-  { sha: 'ghi9012def', message: 'feat: 알림 설정 페이지 추가', author: 'dev1', date: '2026-04-20T10:30:00Z' },
-  { sha: 'def5678abc', message: 'fix: 로그인 세션 만료 처리', author: 'dev2', date: '2026-04-19T15:00:00Z' },
-  { sha: 'abc1234xyz', message: 'style: 버튼 컴포넌트 통일', author: 'dev1', date: '2026-04-18T09:00:00Z' },
-  { sha: 'xyz0987uvw', message: 'chore: 의존성 업데이트', author: 'dev3', date: '2026-04-17T11:20:00Z' },
-]
 
 export function GitGraph() {
   const { selectedRepo } = useApp()
   const { showToast } = useToast()
+  const t = useTranslation()
   const [loading, setLoading] = useState(false)
-  const [commits] = useState<CommitRow[]>(MOCK_COMMITS)
+  const [commits, setCommits] = useState<CommitInfo[]>([])
 
-  if (!selectedRepo) return <EmptyState icon="🌿" title="레포지토리를 선택해주세요" />
+  useEffect(() => {
+    if (!selectedRepo?.id) {
+      setCommits([])
+      return
+    }
+    setLoading(true)
+    api.diff
+      .getCommits(selectedRepo.id)
+      .then(setCommits)
+      .catch(() => setCommits([]))
+      .finally(() => setLoading(false))
+  }, [selectedRepo?.id])
+
+  if (!selectedRepo) return <EmptyState icon="🌿" title={t.gitGraph.selectRepo} />
 
   async function handleRefresh() {
     setLoading(true)
-    // ipc:diff:check
-    await new Promise((r) => setTimeout(r, 800))
-    setLoading(false)
-    showToast('커밋 내역을 새로고침했습니다', 'success')
+    try {
+      const updated = await api.diff.getCommits(selectedRepo!.id)
+      setCommits(updated)
+      showToast(t.gitGraph.refreshed, 'success')
+    } catch {
+      showToast(t.gitGraph.refreshError, 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <div className={styles.container}>
       <div className={styles.header}>
         <div>
-          <h3 className={styles.title}>커밋 내역</h3>
+          <h3 className={styles.title}>{t.gitGraph.title}</h3>
           <p className={styles.baseline}>
-            기준 SHA: <code className={styles.sha}>{selectedRepo.baselineSha || '(없음)'}</code>
+            {t.gitGraph.baselineSha}:{' '}
+            <code className={styles.sha}>{selectedRepo.baselineSha || t.gitGraph.noBaseline}</code>
           </p>
         </div>
         <Button variant="secondary" onClick={handleRefresh} loading={loading} size="sm">
-          새로고침
+          {t.common.refresh}
         </Button>
       </div>
 
       {commits.length === 0 ? (
-        <EmptyState icon="📋" title="커밋 내역이 없습니다" />
+        <EmptyState
+          icon="📋"
+          title={selectedRepo.baselineSha ? t.gitGraph.noNewCommits : t.gitGraph.noBaselineSet}
+        />
       ) : (
-        <div className={styles.table}>
+        <div className={styles.graphWrap}>
           <div className={styles.thead}>
-            <span>SHA</span>
-            <span>메시지</span>
-            <span>작성자</span>
-            <span>날짜</span>
+            <span />
+            <span>{t.gitGraph.colSha}</span>
+            <span>{t.gitGraph.colMessage}</span>
+            <span>{t.gitGraph.colAuthor}</span>
+            <span>{t.gitGraph.colDate}</span>
           </div>
-          {commits.map((c) => (
+          {commits.map((c, i) => (
             <div key={c.sha} className={styles.row}>
+              {/* 그래프 열: 커밋 원(node) + 연결선(connector) */}
+              <div className={styles.nodeCol}>
+                <div className={styles.node} />
+                {i < commits.length - 1 && <div className={styles.connector} />}
+              </div>
               <code className={styles.sha}>{c.sha.slice(0, 7)}</code>
               <span className={styles.message}>{c.message}</span>
               <span className={styles.author}>{c.author}</span>

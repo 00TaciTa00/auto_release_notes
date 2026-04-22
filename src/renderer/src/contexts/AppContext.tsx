@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import type { Repository, ReleaseNote, GlobalSettings } from '../../../shared/types'
+import { api } from '../lib/api'
 
 interface AppContextValue {
   repos: Repository[]
@@ -18,86 +19,6 @@ interface AppContextValue {
 
 const AppContext = createContext<AppContextValue | null>(null)
 
-const MOCK_REPOS: Repository[] = [
-  {
-    id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-    name: 'frontend-service',
-    platform: 'gitlab',
-    diffSource: 'api',
-    repoUrl: 'https://gitlab.com/example/frontend-service',
-    aiProvider: 'claude',
-    summaryLanguage: 'both',
-    summaryStyle: 'detailed',
-    baselineSha: 'abc1234',
-    displayOrder: 0,
-    createdAt: '2026-04-01T00:00:00Z',
-    updatedAt: '2026-04-01T00:00:00Z',
-  },
-  {
-    id: 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
-    name: 'backend-api',
-    platform: 'github',
-    diffSource: 'local-git',
-    repoUrl: 'https://github.com/example/backend-api',
-    localPath: '/home/user/projects/backend-api',
-    aiProvider: 'claude',
-    summaryLanguage: 'ko',
-    summaryStyle: 'concise',
-    baselineSha: 'def5678',
-    displayOrder: 1,
-    createdAt: '2026-04-02T00:00:00Z',
-    updatedAt: '2026-04-15T00:00:00Z',
-  },
-]
-
-const MOCK_RELEASE_NOTES: ReleaseNote[] = [
-  {
-    id: 1,
-    repoId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-    fromSha: 'abc1234',
-    toSha: 'def5678',
-    versionTag: 'v1.2.0',
-    rawDiff: 'diff --git a/src/App.tsx b/src/App.tsx\n...',
-    aiDraftKo: `## v1.2.0 업데이트 노트
-
-### 기능 추가
-- 사용자 알림 설정 기능 추가
-- 다크모드 지원
-
-### 버그 수정
-- 로그인 세션 만료 시 올바르게 처리되지 않던 문제 수정
-- 모바일 환경에서 레이아웃이 깨지는 문제 수정`,
-    aiDraftEn: `## v1.2.0 Release Notes
-
-### New Features
-- Added user notification settings
-- Dark mode support
-
-### Bug Fixes
-- Fixed session expiry handling on login
-- Fixed layout issues on mobile`,
-    changeTypes: ['feature', 'bug_fix'],
-    createdAt: '2026-04-18T09:00:00Z',
-    updatedAt: '2026-04-18T09:00:00Z',
-  },
-  {
-    id: 2,
-    repoId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-    fromSha: 'def5678',
-    toSha: 'ghi9012',
-    versionTag: 'v1.1.5',
-    rawDiff: 'diff --git a/src/components/Button.tsx...',
-    aiDraftKo: `## v1.1.5 업데이트 노트
-
-### UI 변경
-- 버튼 컴포넌트 디자인 통일
-- 폰트 크기 조정`,
-    changeTypes: ['ui'],
-    createdAt: '2026-04-10T14:30:00Z',
-    updatedAt: '2026-04-10T14:30:00Z',
-  },
-]
-
 const DEFAULT_SETTINGS: GlobalSettings = {
   appLanguage: 'ko',
   appTheme: 'light',
@@ -107,10 +28,28 @@ const DEFAULT_SETTINGS: GlobalSettings = {
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [repos, setRepos] = useState<Repository[]>(MOCK_REPOS)
-  const [selectedRepoId, setSelectedRepoId] = useState<string | null>(MOCK_REPOS[0]?.id ?? null)
-  const [releaseNotes, setReleaseNotes] = useState<ReleaseNote[]>(MOCK_RELEASE_NOTES)
+  const [repos, setRepos] = useState<Repository[]>([])
+  const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null)
+  const [releaseNotes, setReleaseNotes] = useState<ReleaseNote[]>([])
   const [settings, setSettings] = useState<GlobalSettings>(DEFAULT_SETTINGS)
+
+  // 앱 시작 시 DB에서 데이터 로드
+  useEffect(() => {
+    Promise.all([api.repo.getAll(), api.settings.get()]).then(([loadedRepos, loadedSettings]) => {
+      setRepos(loadedRepos)
+      setSelectedRepoId(loadedRepos[0]?.id ?? null)
+      setSettings(loadedSettings)
+    })
+  }, [])
+
+  // 선택 레포 변경 시 해당 릴리즈 노트 로드
+  useEffect(() => {
+    if (!selectedRepoId) {
+      setReleaseNotes([])
+      return
+    }
+    api.releaseNote.getByRepo(selectedRepoId).then(setReleaseNotes)
+  }, [selectedRepoId])
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', settings.appTheme)
@@ -118,23 +57,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const selectedRepo = repos.find((r) => r.id === selectedRepoId) ?? null
 
+  // repo는 이미 api.repo.add로 DB 저장 후 전달받은 값
   function addRepo(repo: Repository) {
     setRepos((prev) => [...prev, repo])
     setSelectedRepoId(repo.id)
   }
 
   function deleteRepo(id: string) {
-    setRepos((prev) => prev.filter((r) => r.id !== id))
-    setSelectedRepoId((prev) => {
-      if (prev === id) {
-        const remaining = repos.filter((r) => r.id !== id)
-        return remaining[0]?.id ?? null
-      }
-      return prev
+    api.repo.delete(id)
+    setRepos((prev) => {
+      const remaining = prev.filter((r) => r.id !== id)
+      setSelectedRepoId((current) => (current === id ? (remaining[0]?.id ?? null) : current))
+      return remaining
     })
   }
 
   function updateRepo(id: string, patch: Partial<Repository>) {
+    api.repo.updateSettings(id, patch)
     setRepos((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)))
   }
 

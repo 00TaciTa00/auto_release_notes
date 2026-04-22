@@ -3,6 +3,7 @@ import { useApp } from '../../contexts/AppContext'
 import { Modal } from '../common/Modal'
 import { Button } from '../common/Button'
 import { useToast } from '../common/Toast'
+import { api } from '../../lib/api'
 import styles from './GlobalSettingsModal.module.css'
 
 interface GlobalSettingsModalProps {
@@ -26,18 +27,32 @@ export function GlobalSettingsModal({ isOpen, onClose }: GlobalSettingsModalProp
 
   async function handleSave() {
     setSaving(true)
-    await new Promise((r) => setTimeout(r, 300))
-    setSettings({
-      appTheme: theme,
-      appLanguage: language,
-      startupLaunch,
-      webhookEnabled,
-      webhookPort: Number(webhookPort) || 45678,
-    })
-    // ipc:secure:setApiKey for keys
-    setSaving(false)
-    showToast('설정이 저장되었습니다', 'success')
-    onClose()
+    try {
+      const patch = {
+        appTheme: theme,
+        appLanguage: language,
+        startupLaunch,
+        webhookEnabled,
+        webhookPort: Number(webhookPort) || 45678,
+      }
+
+      await api.settings.update(patch)
+
+      const keyOps: Promise<void>[] = []
+      if (claudeKey.trim()) keyOps.push(api.secure.setApiKey('claudeApiKey', claudeKey.trim()))
+      if (openaiKey.trim()) keyOps.push(api.secure.setApiKey('openaiApiKey', openaiKey.trim()))
+      if (naverWorksKey.trim())
+        keyOps.push(api.secure.setApiKey('naverWorksApiKey', naverWorksKey.trim()))
+      await Promise.all(keyOps)
+
+      setSettings(patch)
+      showToast('설정이 저장되었습니다', 'success')
+      onClose()
+    } catch {
+      showToast('설정 저장에 실패했습니다', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -148,7 +163,7 @@ export function GlobalSettingsModal({ isOpen, onClose }: GlobalSettingsModalProp
       </div>
 
       <div className={styles.actions}>
-        <Button variant="ghost" onClick={onClose}>
+        <Button variant="ghost" onClick={onClose} disabled={saving}>
           취소
         </Button>
         <Button variant="primary" onClick={handleSave} loading={saving}>

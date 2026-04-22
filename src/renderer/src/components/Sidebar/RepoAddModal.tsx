@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import { Modal } from '../common/Modal'
 import { Button } from '../common/Button'
+import { useToast } from '../common/Toast'
+import { api } from '../../lib/api'
 import type { Platform, DiffSource, Repository } from '../../../../shared/types'
 import styles from './RepoAddModal.module.css'
 
@@ -12,37 +14,52 @@ interface RepoAddModalProps {
 }
 
 export function RepoAddModal({ isOpen, onClose, onAdd }: RepoAddModalProps) {
+  const { showToast } = useToast()
   const [name, setName] = useState('')
   const [platform, setPlatform] = useState<Platform>('gitlab')
   const [diffSource, setDiffSource] = useState<DiffSource>('api')
   const [repoUrl, setRepoUrl] = useState('')
   const [localPath, setLocalPath] = useState('')
   const [accessToken, setAccessToken] = useState('')
+  const [saving, setSaving] = useState(false)
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim() || !repoUrl.trim()) return
 
-    const now = new Date().toISOString()
-    const repo: Repository = {
-      id: uuidv4(),
-      name: name.trim(),
-      platform,
-      diffSource,
-      repoUrl: repoUrl.trim(),
-      localPath: diffSource === 'local-git' ? localPath.trim() : undefined,
-      aiProvider: 'claude',
-      summaryLanguage: 'ko',
-      summaryStyle: 'detailed',
-      baselineSha: '',
-      displayOrder: 0,
-      createdAt: now,
-      updatedAt: now,
-    }
+    setSaving(true)
+    try {
+      const now = new Date().toISOString()
+      const repoPayload: Repository = {
+        id: uuidv4(),
+        name: name.trim(),
+        platform,
+        diffSource,
+        repoUrl: repoUrl.trim(),
+        localPath: diffSource === 'local-git' ? localPath.trim() || undefined : undefined,
+        aiProvider: 'claude',
+        summaryLanguage: 'ko',
+        summaryStyle: 'detailed',
+        baselineSha: '',
+        displayOrder: 0,
+        createdAt: now,
+        updatedAt: now,
+      }
 
-    onAdd(repo)
-    resetForm()
-    onClose()
+      const saved = await api.repo.add(repoPayload)
+
+      if (accessToken.trim()) {
+        await api.secure.setApiKey(`repo:${saved.id}:access_token`, accessToken.trim())
+      }
+
+      onAdd(saved)
+      resetForm()
+      onClose()
+    } catch {
+      showToast('레포지토리 추가에 실패했습니다', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   function resetForm() {
@@ -139,10 +156,15 @@ export function RepoAddModal({ isOpen, onClose, onAdd }: RepoAddModalProps) {
         </div>
 
         <div className={styles.actions}>
-          <Button type="button" variant="ghost" onClick={handleClose}>
+          <Button type="button" variant="ghost" onClick={handleClose} disabled={saving}>
             취소
           </Button>
-          <Button type="submit" variant="primary" disabled={!name.trim() || !repoUrl.trim()}>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={!name.trim() || !repoUrl.trim()}
+            loading={saving}
+          >
             추가
           </Button>
         </div>
