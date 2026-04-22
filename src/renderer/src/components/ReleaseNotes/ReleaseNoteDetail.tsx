@@ -34,7 +34,8 @@ function markdownToNaverWorks(md: string): string {
     .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
     .replace(/\*(.*?)\*/g, '<i>$1</i>')
     .replace(/^[-*+]\s+(.*)/gm, '<li>$1</li>')
-    .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+    // 연속된 <li> 블록 전체를 <ul>로 감싸기 (개행 기준으로 그루핑)
+    .replace(/(<li>[^\n]*<\/li>\n?)+/g, (match) => `<ul>${match}</ul>`)
     .replace(/\n/g, '<br>')
 }
 
@@ -81,17 +82,25 @@ export function ReleaseNoteDetail({ note, repo, onBack }: ReleaseNoteDetailProps
     }
   }
 
-  function handleCopy() {
+  async function handleCopy() {
     const content = activeTab === 'ko' ? editedKo : editedEn
-    let text: string
-    if (copyFormat === 'markdown') {
-      text = content
-    } else if (copyFormat === 'text') {
-      text = markdownToText(content)
+
+    if (copyFormat === 'naver-works') {
+      // Naver Works는 text/html MIME 타입으로 복사해야 서식이 유지됨
+      const html = markdownToNaverWorks(content)
+      try {
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'text/html': new Blob([html], { type: 'text/html' }) }),
+        ])
+      } catch {
+        // ClipboardItem 미지원 환경(일부 Electron 버전)에서 플레인 텍스트로 폴백
+        await navigator.clipboard.writeText(html)
+      }
     } else {
-      text = markdownToNaverWorks(content)
+      const text = copyFormat === 'markdown' ? content : markdownToText(content)
+      await navigator.clipboard.writeText(text)
     }
-    navigator.clipboard.writeText(text)
+
     showToast('클립보드에 복사되었습니다', 'success')
   }
 

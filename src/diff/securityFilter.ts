@@ -26,9 +26,15 @@ function globToRegex(pattern: string): RegExp {
   for (let i = 0; i < pattern.length; i++) {
     const ch = pattern[i]!
     if (ch === '*' && pattern[i + 1] === '*') {
-      // ** → 슬래시 포함 모든 문자
-      result += '.*'
-      i++ // 다음 * 건너뜀
+      if (pattern[i + 2] === '/') {
+        // **/ → 경로 접두사 없음 포함 매칭 (예: **/*.json은 package.json, a/b.json 모두 매칭)
+        result += '(.*/)?'
+        i += 2 // ** 와 / 모두 건너뜀
+      } else {
+        // ** (끝에 위치) → 슬래시 포함 모든 문자
+        result += '.*'
+        i++ // 두 번째 * 건너뜀
+      }
     } else if (ch === '*') {
       // * → 슬래시 제외 모든 문자
       result += '[^/]*'
